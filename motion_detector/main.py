@@ -6,9 +6,10 @@ from utils import load_config, setup_logger, ensure_log_file
 from motion import MotionDetector
 from hotkey_listener import HotkeyListener
 from auto_start import install_systemd_service, uninstall_systemd_service
-from person_detector import PersonDetector
+from yolo_person_detector import YoloPersonDetector
 from live_feed import LiveFeedManager
 from notifier import Notifier
+from api import APIServer
 import cv2
 import time
 
@@ -52,8 +53,10 @@ if __name__ == '__main__':
     person_alert_sent = False
 
     detector = MotionDetector(sensitivity, threshold, reference_update, camera_index, logger, video_path=args.video)
-    person_detector = PersonDetector()
+    person_detector = YoloPersonDetector(conf_threshold=0.5)
     live_feed = LiveFeedManager()
+    api_server = APIServer(detector, notifier, live_feed, stop_flag)
+    api_server.start()
 
     cap = cv2.VideoCapture(args.video if args.video else camera_index)
     last_person_time = 0
@@ -111,4 +114,5 @@ if __name__ == '__main__':
         cv2.destroyAllWindows()
         if live_feed_started:
             live_feed.stop()
+        api_server.stop()
         hotkey_listener.join()
