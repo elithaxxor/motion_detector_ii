@@ -42,6 +42,12 @@ def status():
     if os.path.exists(log_path):
         with open(log_path) as f:
             detections = f.readlines()[-20:]
+    # Load notification log (last 20 events)
+    notif_log_path = os.path.join(os.path.dirname(__file__), '../notification_log.txt')
+    notifications = []
+    if os.path.exists(notif_log_path):
+        with open(notif_log_path) as f:
+            notifications = f.readlines()[-20:]
     # Load notification config
     config_path = os.path.join(os.path.dirname(__file__), '../config.yaml')
     with open(config_path) as f:
@@ -52,4 +58,4 @@ def status():
         'whatsapp': config.get('whatsapp', {}).get('enabled', False),
         'discord': config.get('discord', {}).get('enabled', False),
     }
-    return render_template('dashboard.html', detections=detections, channels=channels)
+    return render_template('dashboard.html', detections=detections, notifications=notifications, channels=channels)

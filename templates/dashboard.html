@@ -1,6 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YOLO Person Detector Dashboard</title>
 </head>
 <body>
@@ -17,6 +19,12 @@
         <li>Telegram: {{ 'Enabled' if channels.telegram else 'Disabled' }}</li>
         <li>WhatsApp: {{ 'Enabled' if channels.whatsapp else 'Disabled' }}</li>
         <li>Discord: {{ 'Enabled' if channels.discord else 'Disabled' }}</li>
+    </ul>
+    <h3>Notification History</h3>
+    <ul>
+        {% for log in notifications|slice(:20) %}
+            <li>{{ log }}</li>
+        {% endfor %}
     </ul>
     <a href="/dashboard/logout">Logout</a>
 </body>
