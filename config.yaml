@@ -1,0 +1,29 @@
+# Motion Detector Configuration
+sensitivity: 800
+threshold: 100
+hotkey: ctrl+l
+headless: false
+auto_start: false
+reference_update: true
+camera_index: 0
+log_file: camera_log.txt
+live_feed_timeout: 15
+
+email:
+  enabled: false
+  from: your@email.com
+  to: notify@email.com
+  smtp_server: smtp.example.com
+  smtp_port: 465
+  username: your@email.com
+  password: yourpassword
+
+telegram:
+  enabled: false
+  bot_token: ""
+  chat_id: ""
+
+whatsapp:
+  enabled: false
+  phone: ""
+  apikey: ""

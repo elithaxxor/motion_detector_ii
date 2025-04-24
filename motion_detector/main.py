@@ -8,6 +8,7 @@ from hotkey_listener import HotkeyListener
 from auto_start import install_systemd_service, uninstall_systemd_service
 from person_detector import PersonDetector
 from live_feed import LiveFeedManager
+from notifier import Notifier
 import cv2
 import time
 
@@ -47,6 +48,9 @@ if __name__ == '__main__':
     hotkey_listener = HotkeyListener(hotkey, stop_flag)
     hotkey_listener.start()
 
+    notifier = Notifier(config)
+    person_alert_sent = False
+
     detector = MotionDetector(sensitivity, threshold, reference_update, camera_index, logger, video_path=args.video)
     person_detector = PersonDetector()
     live_feed = LiveFeedManager()
@@ -68,6 +72,11 @@ if __name__ == '__main__':
 
             if person_present:
                 last_person_time = now
+                if not person_alert_sent:
+                    url = f"http://localhost:5000/video_feed"
+                    msg = f"Human detected! Live feed available at {url}"
+                    notifier.notify_all("Human Detected", msg)
+                    person_alert_sent = True
                 # Draw boxes
                 for (x1, y1, x2, y2, conf) in persons:
                     cv2.rectangle(out_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
@@ -87,6 +96,7 @@ if __name__ == '__main__':
             elif live_feed_started and (now - last_person_time > live_feed_timeout):
                 live_feed.stop()
                 live_feed_started = False
+                person_alert_sent = False
 
             if window_open:
                 if cv2.waitKey(1) & 0xFF == ord('q'):
