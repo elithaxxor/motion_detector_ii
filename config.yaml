@@ -27,3 +27,7 @@ whatsapp:
   enabled: false
   phone: ""
   apikey: ""
+
+discord:
+  enabled: false
+  webhook_url: ""
