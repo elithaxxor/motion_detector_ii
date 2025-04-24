@@ -1,7 +1,15 @@
-import threading
-import os
+"""
+Main entry point for the YOLO-based Person Detection and Notification System.
+- Detects humans in video/camera using YOLOv3-tiny.
+- Shows live feed (GUI & web) only when a person is detected.
+- Sends notifications (Email, Telegram, WhatsApp, Discord).
+- Provides REST API for status and control.
+"""
 import sys
+import os
+sys.path.insert(0, os.path.dirname(__file__))
 import argparse
+import threading
 from utils import load_config, setup_logger, ensure_log_file
 from motion import MotionDetector
 from hotkey_listener import HotkeyListener
@@ -13,26 +21,32 @@ from api import APIServer
 import cv2
 import time
 
-if __name__ == '__main__':
+def main():
+    """
+    Main function to run the person detection system.
+    Loads configuration, sets up detectors, hotkeys, notifications, and live feeds.
+    """
     # Argument parsing for video file simulation
-    parser = argparse.ArgumentParser(description='Motion Detector')
-    parser.add_argument('--video', type=str, default=None, help='Path to video file for simulation (instead of camera)')
+    parser = argparse.ArgumentParser(description='YOLO Person Detector')
+    parser.add_argument('--video', type=    str, default=None, help='Path to video file for simulation (instead of camera)')
     args = parser.parse_args()
 
     # Load config
     config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
     config = load_config(config_path)
     
-    sensitivity = config.get('sensitivity', 800)
-    threshold = config.get('threshold', 100)
-    hotkey = config.get('hotkey', 'ctrl+l')
-    headless = config.get('headless', False)
-    auto_start = config.get('auto_start', False)
-    reference_update = config.get('reference_update', True)
-    camera_index = config.get('camera_index', 0)
-    log_file = config.get('log_file', 'camera_log.txt')
-    live_feed_timeout = config.get('live_feed_timeout', 15)  # seconds
+    # Extract configuration parameters
+    sensitivity = config.get('sensitivity', 800)  # Motion detection sensitivity
+    threshold = config.get('threshold', 100)  # Motion detection threshold
+    hotkey = config.get('hotkey', 'ctrl+l')  # Hotkey to stop the program
+    headless = config.get('headless', False)  # Run in headless mode (no GUI)
+    auto_start = config.get('auto_start', False)  # Auto-start the program
+    reference_update = config.get('reference_update', True)  # Update reference frame
+    camera_index = config.get('camera_index', 0)  # Camera index
+    log_file = config.get('log_file', 'camera_log.txt')  # Log file path
+    live_feed_timeout = config.get('live_feed_timeout', 15)  # Live feed timeout (seconds)
 
+    # Ensure log file exists
     ensure_log_file(log_file)
     logger = setup_logger(log_file)
 
@@ -49,15 +63,18 @@ if __name__ == '__main__':
     hotkey_listener = HotkeyListener(hotkey, stop_flag)
     hotkey_listener.start()
 
+    # Initialize notifier
     notifier = Notifier(config)
     person_alert_sent = False
 
+    # Initialize detectors
     detector = MotionDetector(sensitivity, threshold, reference_update, camera_index, logger, video_path=args.video)
     person_detector = YoloPersonDetector(conf_threshold=0.5)
     live_feed = LiveFeedManager()
     api_server = APIServer(detector, notifier, live_feed, stop_flag)
     api_server.start()
 
+    # Open video capture
     cap = cv2.VideoCapture(args.video if args.video else camera_index)
     last_person_time = 0
     window_open = False
@@ -65,42 +82,60 @@ if __name__ == '__main__':
 
     try:
         while not stop_flag.is_set():
+            # Read frame from video capture
             ret, frame = cap.read()
             if not ret:
                 break
+
+            # Process frame for motion detection
             detected, out_frame, _, _ = detector.process_frame(frame)
+
+            # Detect persons in the frame
             persons = person_detector.detect(frame)
             person_present = len(persons) > 0
             now = time.time()
 
             if person_present:
+                # Update last person time
                 last_person_time = now
+
+                # Send notification if not already sent
                 if not person_alert_sent:
                     url = f"http://localhost:5000/video_feed"
                     msg = f"Human detected! Live feed available at {url}"
                     notifier.notify_all("Human Detected", msg)
                     person_alert_sent = True
-                # Draw boxes
+
+                # Draw bounding boxes for detected persons
                 for (x1, y1, x2, y2, conf) in persons:
                     cv2.rectangle(out_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+
                 # Start local GUI if not already open
                 if not window_open:
                     cv2.namedWindow('Live Feed', cv2.WINDOW_NORMAL)
                     window_open = True
+
+                # Display output frame
                 cv2.imshow('Live Feed', out_frame)
+
                 # Start web stream if not already running
                 if not live_feed_started:
                     live_feed.start()
                     live_feed_started = True
+
+                # Update live feed frame
                 live_feed.update_frame(out_frame)
             elif window_open and (now - last_person_time > live_feed_timeout):
+                # Close local GUI if live feed timeout exceeded
                 cv2.destroyWindow('Live Feed')
                 window_open = False
             elif live_feed_started and (now - last_person_time > live_feed_timeout):
+                # Stop web stream if live feed timeout exceeded
                 live_feed.stop()
                 live_feed_started = False
                 person_alert_sent = False
 
+            # Hotkey and exit logic
             if window_open:
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     stop_flag.set()
@@ -110,9 +145,17 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         pass
     finally:
+        # Release video capture and close windows
         cap.release()
         cv2.destroyAllWindows()
+
+        # Stop live feed and API server
         if live_feed_started:
             live_feed.stop()
         api_server.stop()
+
+        # Join hotkey listener thread
         hotkey_listener.join()
+
+if __name__ == '__main__':
+    main()
