@@ -1,72 +1,72 @@
-Motion Detection Security Camera
+# YOLO Persons Detector
 
-This Python program is designed to capture video from your webcam and detect motion in real time. The program uses OpenCV for image processing and displays a live security feed with motion-detected events highlighted with bounding boxes. Additionally, it logs the motion events with a timestamp into a log file.
+A high-performance, privacy-respecting, on-demand live video feed and notification system for human detection using YOLOv3-tiny.
 
-Features
+## Features
+- **YOLOv3-tiny Person Detection:** Accurate detection of humans in camera/video streams.
+- **On-Demand Live Feed:** Local GUI and web stream only appear when a person is detected.
+- **Multi-Channel Notifications:** Email, Telegram, WhatsApp, Discord alerts with live feed link.
+- **REST API:** Control and monitor the system via HTTP endpoints.
+- **Hotkey Support:** Quickly stop or control the system via keyboard.
+- **Extensible:** Modular codebase for multi-camera, cloud upload, face/object recognition, and more.
 
-	•	Real-Time Motion Detection: Detects movement by comparing frames and identifying significant differences.
-	•	Security Feed Display: The feed from the webcam is displayed with real-time motion tracking and timestamps.
-	•	Bounding Box on Motion: When motion is detected, a green rectangle is drawn around the moving object.
-	•	Log Motion Events: All detected motion events are logged into camera_log.txt with a timestamp.
-	•	Multiple Windows Display: The program shows the security feed, the thresholded image (binary image), and the frame delta used for motion detection.
+## Quick Start
 
-How It Works
+### 1. Requirements
+- Python 3.7+
+- OpenCV (`opencv-python`)
+- Flask
+- requests
 
-	1.	Video Capture: The program starts by capturing video from your webcam using OpenCV.
-	2.	Frame Processing: Each frame is converted to greyscale, blurred to reduce noise, and compared to an initial reference frame (the first frame captured).
-	3.	Motion Detection: The difference between the current frame and the reference frame is used to detect motion. If significant changes (contours) are found in the frame, the motion is marked as detected.
-	4.	Bounding Box: A green bounding box is drawn around the detected motion area.
-	5.	Logging: The timestamp and detection event are recorded in camera_log.txt.
-	6.	Live Feed: A live feed with detected motion is shown to the user with real-time timestamps.
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-Installation
+### 2. Download YOLOv3-tiny Model Files
+- Place `yolov3-tiny.cfg`, `yolov3-tiny.weights`, and `coco.names` in a `models/` directory at the project root.
+- Download from [YOLO website](https://pjreddie.com/darknet/yolo/) or the [official repo](https://github.com/pjreddie/darknet/tree/master/cfg).
 
-Prerequisites:
+### 3. Configure Notifications
+Edit `config.yaml` to enable and configure Email, Telegram, WhatsApp, and Discord notifications.
 
-	1.	Install Python (if not already installed)
-	2.	Install required libraries:
-	•	OpenCV
-•	Imutils
-	•	Numpy
+### 4. Run the Detector
+```bash
+python -m motion_detector.main
+```
 
-To Install the Required Libraries:
+- The live feed (GUI and web at `http://localhost:5000/video_feed`) will activate only when a person is detected.
+- Notifications are sent on detection.
+- REST API available at `http://localhost:8000`.
 
-    1.	Clone the Repository:
-        ``` git clone
-    2. pip install -r requirements.txt
+## REST API
+- `GET /status` — System status (live feed, detection active)
+- `POST /notify` — Send notification (JSON: `{subject, body}`)
+- `POST /control` — Start/stop detection (JSON: `{action: start|stop}`)
 
-Steps:
+## File Structure
+- `main.py` — Main entry point, orchestrates detection, feeds, notifications, API.
+- `yolo_person_detector.py` — YOLOv3-tiny person detection logic.
+- `live_feed.py` — Local GUI and Flask web stream.
+- `notifier.py` — Notification logic for all channels.
+- `api.py` — REST API server.
+- `motion.py`, `hotkey_listener.py`, `auto_start.py`, `utils.py` — Utilities and support modules.
 
-Usage
+## Advanced Usage
+- **Multi-camera:** Extend by running multiple pipelines or adding camera configs.
+- **Cloud upload, face/object recognition:** Add new modules or models as needed.
+- **Snapshot in notifications:** Easily extend notifier to send images.
 
-	•	When the program runs, it captures video from your webcam.
-	•	If motion is detected, the program will display a bounding box around the moving object and log the event.
-	•	Press the q key at any time to quit the program and close all windows.
+## Security
+- Protect `config.yaml` and model files.
+- Use authentication for web/API if exposing beyond localhost.
 
-Motion Detection Process:
+## Contributing
+Contributions welcome! Open issues or submit PRs for new features, bugfixes, or documentation.
 
-	•	Frame Comparison: The first frame is taken as a reference. Each subsequent frame is compared to this reference using a difference calculation (frame delta).
-	•	Thresholding: Any significant differences are highlighted in the thresholded image.
+## License
+MIT License
 
-	•	Contours: Contours are drawn around detected areas of motion. If the area is large enough (above 800 pixels), it is considered a motion event.
-	•	Log File: Each motion event is logged into camera_log.txt with a timestamp for tracking purposes.
+---
 
-Customization:
-
-	•	You can adjust the threshold level and contour area sensitivity in the code to detect smaller or larger movements as per your requirements.
-
-File Log
-
-	•	camera_log.txt: This file logs the detected motion events with timestamps.
-
-Example Output:
-
-	•	Security Feed: Displays the live webcam feed with a bounding box around detected motion.
-	•	Threshold Image: Shows the binary image after thresholding, highlighting areas of motion.
-	•	Frame Delta: Displays the difference between the current frame and the reference frame.
-
-License
-
-This project is free to use under the MIT License.
-
-This project provides a basic motion detection system using Python and OpenCV, which can be further expanded for home security, surveillance, or other applications involving real-time motion tracking.# Security-Camera-Motion-Detection
+**Repository:** https://github.com/elithaxxor/YOLO_Persons_Detector.git
