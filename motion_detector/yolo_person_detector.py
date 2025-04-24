@@ -3,6 +3,27 @@ import numpy as np
 import os
 
 class YoloPersonDetector:
+    """
+Detects persons in a given frame using YOLO object detection.
+
+Args:
+    model_dir (str, optional): Directory path of the YOLO model files. Defaults to None.
+    conf_threshold (float, optional): Confidence threshold for person detection. Defaults to 0.5.
+    nms_threshold (float, optional): Non-maximum suppression threshold. Defaults to 0.3.
+
+Attributes:
+    conf_threshold (float): Confidence threshold for person detection.
+    nms_threshold (float): Non-maximum suppression threshold.
+    classes (list): List of class names.
+    net: YOLO neural network model.
+    person_class_id (int): Class ID of 'person'.
+
+Methods:
+    detect(frame): Detects persons in the given frame.
+
+Returns:
+    list: List of detected person bounding boxes and confidences.
+"""
     def __init__(self, model_dir=None, conf_threshold=0.5, nms_threshold=0.3):
         if model_dir is None:
             model_dir = os.path.join(os.path.dirname(__file__), '../models')

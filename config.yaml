@@ -1,33 +1,67 @@
 # Motion Detector Configuration
-sensitivity: 800
-threshold: 100
+cameras:
+  - name: FrontDoor
+    camera_index: 0
+    sensitivity: 800
+    threshold: 100
+    reference_update: true
+    live_feed_timeout: 15
+    log_file: camera_log_frontdoor.txt
+    notifications:
+      email:
+        enabled: false
+        on_person: true
+        from: your@email.com
+        to: notify@email.com
+        smtp_server: smtp.example.com
+        smtp_port: 465
+        username: your@email.com
+        password: yourpassword
+      telegram:
+        enabled: false
+        on_person: true
+        bot_token: ""
+        chat_id: ""
+      whatsapp:
+        enabled: false
+        on_person: true
+        phone: ""
+        apikey: ""
+      discord:
+        enabled: false
+        on_person: true
+        webhook_url: ""
+  - name: Garage
+    camera_index: 1
+    sensitivity: 700
+    threshold: 120
+    reference_update: true
+    live_feed_timeout: 15
+    log_file: camera_log_garage.txt
+    notifications:
+      email:
+        enabled: false
+        on_person: true
+        from: your@email.com
+        to: notify@email.com
+        smtp_server: smtp.example.com
+        smtp_port: 465
+        username: your@email.com
+        password: yourpassword
+      telegram:
+        enabled: false
+        on_person: true
+        bot_token: ""
+        chat_id: ""
+      whatsapp:
+        enabled: false
+        on_person: true
+        phone: ""
+        apikey: ""
+      discord:
+        enabled: false
+        on_person: true
+        webhook_url: ""
 hotkey: ctrl+l
 headless: false
 auto_start: false
-reference_update: true
-camera_index: 0
-log_file: camera_log.txt
-live_feed_timeout: 15
-
-email:
-  enabled: false
-  from: your@email.com
-  to: notify@email.com
-  smtp_server: smtp.example.com
-  smtp_port: 465
-  username: your@email.com
-  password: yourpassword
-
-telegram:
-  enabled: false
-  bot_token: ""
-  chat_id: ""
-
-whatsapp:
-  enabled: false
-  phone: ""
-  apikey: ""
-
-discord:
-  enabled: false
-  webhook_url: ""

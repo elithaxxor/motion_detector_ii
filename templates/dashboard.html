@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YOLO Person Detector Dashboard</title>
+</head>
+<body>
+    <h2>System Status</h2>
+    <p>Recent Detections:</p>
+    <ul>
+        {% for line in detections %}
+            <li>{{ line }}</li>
+        {% endfor %}
+    </ul>
+    <h3>Notification Channels</h3>
+    <ul>
+        <li>Email: {{ 'Enabled' if channels.email else 'Disabled' }}</li>
+        <li>Telegram: {{ 'Enabled' if channels.telegram else 'Disabled' }}</li>
+        <li>WhatsApp: {{ 'Enabled' if channels.whatsapp else 'Disabled' }}</li>
+        <li>Discord: {{ 'Enabled' if channels.discord else 'Disabled' }}</li>
+    </ul>
+    <a href="/dashboard/logout">Logout</a>
+</body>
+</html>

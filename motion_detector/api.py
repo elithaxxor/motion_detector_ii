@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, request
 from threading import Thread
 import time
+from dashboard import dashboard_bp
 
 class APIServer(Thread):
     def __init__(self, detector, notifier, live_feed, stop_flag):
@@ -10,6 +11,7 @@ class APIServer(Thread):
         self.live_feed = live_feed
         self.stop_flag = stop_flag
         self.app = Flask(__name__)
+        self.app.register_blueprint(dashboard_bp)
         self._setup_routes()
 
     def _setup_routes(self):
