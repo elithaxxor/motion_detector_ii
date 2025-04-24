@@ -6,6 +6,10 @@ from utils import load_config, setup_logger, ensure_log_file
 from motion import MotionDetector
 from hotkey_listener import HotkeyListener
 from auto_start import install_systemd_service, uninstall_systemd_service
+from person_detector import PersonDetector
+from live_feed import LiveFeedManager
+import cv2
+import time
 
 if __name__ == '__main__':
     # Argument parsing for video file simulation
@@ -25,6 +29,7 @@ if __name__ == '__main__':
     reference_update = config.get('reference_update', True)
     camera_index = config.get('camera_index', 0)
     log_file = config.get('log_file', 'camera_log.txt')
+    live_feed_timeout = config.get('live_feed_timeout', 15)  # seconds
 
     ensure_log_file(log_file)
     logger = setup_logger(log_file)
@@ -43,10 +48,57 @@ if __name__ == '__main__':
     hotkey_listener.start()
 
     detector = MotionDetector(sensitivity, threshold, reference_update, camera_index, logger, video_path=args.video)
+    person_detector = PersonDetector()
+    live_feed = LiveFeedManager()
+
+    cap = cv2.VideoCapture(args.video if args.video else camera_index)
+    last_person_time = 0
+    window_open = False
+    live_feed_started = False
+
     try:
-        detector.run(hotkey, headless, log_file, stop_flag)
+        while not stop_flag.is_set():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            detected, out_frame, _, _ = detector.process_frame(frame)
+            persons = person_detector.detect(frame)
+            person_present = len(persons) > 0
+            now = time.time()
+
+            if person_present:
+                last_person_time = now
+                # Draw boxes
+                for (x1, y1, x2, y2, conf) in persons:
+                    cv2.rectangle(out_frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                # Start local GUI if not already open
+                if not window_open:
+                    cv2.namedWindow('Live Feed', cv2.WINDOW_NORMAL)
+                    window_open = True
+                cv2.imshow('Live Feed', out_frame)
+                # Start web stream if not already running
+                if not live_feed_started:
+                    live_feed.start()
+                    live_feed_started = True
+                live_feed.update_frame(out_frame)
+            elif window_open and (now - last_person_time > live_feed_timeout):
+                cv2.destroyWindow('Live Feed')
+                window_open = False
+            elif live_feed_started and (now - last_person_time > live_feed_timeout):
+                live_feed.stop()
+                live_feed_started = False
+
+            if window_open:
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    stop_flag.set()
+            else:
+                if cv2.waitKey(1) == 27:
+                    stop_flag.set()
     except KeyboardInterrupt:
-        print('Interrupted by user.')
+        pass
     finally:
-        hotkey_listener.stop()
-        print('Motion detector stopped.')
+        cap.release()
+        cv2.destroyAllWindows()
+        if live_feed_started:
+            live_feed.stop()
+        hotkey_listener.join()
