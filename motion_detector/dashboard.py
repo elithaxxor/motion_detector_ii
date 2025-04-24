@@ -1,7 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session
+from flask import Blueprint, render_template, request, redirect, url_for, session, send_file, jsonify
 from functools import wraps
 import yaml
 import os
+import psutil
 
 # Simple password for demonstration (should be hashed in production)
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "admin")
@@ -59,3 +60,60 @@ def status():
         'discord': config.get('discord', {}).get('enabled', False),
     }
     return render_template('dashboard.html', detections=detections, notifications=notifications, channels=channels)
+
+@dashboard_bp.route('/dashboard/log/<logtype>')
+@login_required
+def download_log(logtype):
+    if logtype == 'notification':
+        path = os.path.join(os.path.dirname(__file__), '../notification_log.txt')
+    else:
+        path = os.path.join(os.path.dirname(__file__), '../camera_log.txt')
+    if not os.path.exists(path):
+        return 'Log not found', 404
+    return send_file(path, as_attachment=True)
+
+@dashboard_bp.route('/dashboard/logs_ajax')
+@login_required
+def logs_ajax():
+    notif_log_path = os.path.join(os.path.dirname(__file__), '../notification_log.txt')
+    detection_log_path = os.path.join(os.path.dirname(__file__), '../camera_log.txt')
+    notifications = []
+    detections = []
+    if os.path.exists(notif_log_path):
+        with open(notif_log_path) as f:
+            notifications = f.readlines()[-20:]
+    if os.path.exists(detection_log_path):
+        with open(detection_log_path) as f:
+            detections = f.readlines()[-20:]
+    return jsonify({'notifications': notifications, 'detections': detections})
+
+@dashboard_bp.route('/dashboard/clear_log/<logtype>', methods=['POST'])
+@login_required
+def clear_log(logtype):
+    if logtype == 'notification':
+        path = os.path.join(os.path.dirname(__file__), '../notification_log.txt')
+    else:
+        path = os.path.join(os.path.dirname(__file__), '../camera_log.txt')
+    open(path, 'w').close()
+    return '', 204
+
+@dashboard_bp.route('/health')
+def health():
+    # Camera status: check if camera is available (simulate for now)
+    camera_status = True
+    # Notification channel config status
+    config_path = os.path.join(os.path.dirname(__file__), '../config.yaml')
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+    notif_status = {}
+    for ch in ['email', 'telegram', 'whatsapp', 'discord']:
+        notif_status[ch] = bool(config.get(ch, {}).get('enabled', False))
+    # Disk space
+    disk = psutil.disk_usage('/')
+    disk_ok = disk.percent < 90
+    return jsonify({
+        'camera': camera_status,
+        'notifications': notif_status,
+        'disk_ok': disk_ok,
+        'disk_percent': disk.percent
+    })

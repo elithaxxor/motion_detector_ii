@@ -4,27 +4,72 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YOLO Person Detector Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 1em; }
+        @media (max-width: 600px) { body { font-size: 1.2em; } }
+        .log-section { margin-bottom: 2em; }
+        .btn { padding: 0.3em 1em; margin: 0.2em; }
+        .status-ok { color: green; }
+        .status-bad { color: red; }
+    </style>
+    <script>
+    function fetchLogs() {
+        fetch('/dashboard/logs_ajax').then(r => r.json()).then(data => {
+            let notif = document.getElementById('notif-log');
+            notif.innerHTML = '';
+            data.notifications.forEach(l => {
+                let li = document.createElement('li');
+                li.textContent = l;
+                notif.appendChild(li);
+            });
+            let det = document.getElementById('detection-log');
+            det.innerHTML = '';
+            data.detections.forEach(l => {
+                let li = document.createElement('li');
+                li.textContent = l;
+                det.appendChild(li);
+            });
+        });
+    }
+    function fetchHealth() {
+        fetch('/health').then(r => r.json()).then(data => {
+            document.getElementById('camera-status').textContent = data.camera ? 'OK' : 'ERROR';
+            document.getElementById('disk-status').textContent = data.disk_ok ? 'OK' : 'LOW SPACE';
+            document.getElementById('disk-status').className = data.disk_ok ? 'status-ok' : 'status-bad';
+            document.getElementById('disk-percent').textContent = data.disk_percent + '%';
+        });
+    }
+    function clearLog(type) {
+        if(confirm('Clear ' + type + ' log?')) {
+            fetch('/dashboard/clear_log/' + type, {method:'POST'}).then(fetchLogs);
+        }
+    }
+    setInterval(fetchLogs, 2000);
+    setInterval(fetchHealth, 5000);
+    window.onload = function() { fetchLogs(); fetchHealth(); }
+    </script>
 </head>
 <body>
     <h2>System Status</h2>
-    <p>Recent Detections:</p>
-    <ul>
-        {% for line in detections %}
-            <li>{{ line }}</li>
-        {% endfor %}
-    </ul>
+    <div>Status: Camera <span id="camera-status"></span> | Disk <span id="disk-status"></span> (<span id="disk-percent"></span> used)</div>
+    <div class="log-section">
+        <h3>Recent Detections</h3>
+        <button class="btn" onclick="window.location='/dashboard/log/detection'">Download</button>
+        <button class="btn" onclick="clearLog('detection')">Clear</button>
+        <ul id="detection-log"></ul>
+    </div>
+    <div class="log-section">
+        <h3>Notification History</h3>
+        <button class="btn" onclick="window.location='/dashboard/log/notification'">Download</button>
+        <button class="btn" onclick="clearLog('notification')">Clear</button>
+        <ul id="notif-log"></ul>
+    </div>
     <h3>Notification Channels</h3>
     <ul>
         <li>Email: {{ 'Enabled' if channels.email else 'Disabled' }}</li>
         <li>Telegram: {{ 'Enabled' if channels.telegram else 'Disabled' }}</li>
         <li>WhatsApp: {{ 'Enabled' if channels.whatsapp else 'Disabled' }}</li>
         <li>Discord: {{ 'Enabled' if channels.discord else 'Disabled' }}</li>
-    </ul>
-    <h3>Notification History</h3>
-    <ul>
-        {% for log in notifications|slice(:20) %}
-            <li>{{ log }}</li>
-        {% endfor %}
     </ul>
     <a href="/dashboard/logout">Logout</a>
 </body>
