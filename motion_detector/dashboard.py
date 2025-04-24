@@ -79,12 +79,29 @@ def logs_ajax():
     detection_log_path = os.path.join(os.path.dirname(__file__), '../camera_log.txt')
     notifications = []
     detections = []
+    # Get filter params
+    notif_filter = request.args.get('notif_filter', '').strip().lower()
+    notif_channel = request.args.get('notif_channel', '').strip().lower()
+    notif_status = request.args.get('notif_status', '').strip().lower()
+    detect_filter = request.args.get('detect_filter', '').strip().lower()
     if os.path.exists(notif_log_path):
         with open(notif_log_path) as f:
-            notifications = f.readlines()[-20:]
+            logs = f.readlines()[-100:]
+            filtered = []
+            for l in logs:
+                l_low = l.lower()
+                if notif_filter and notif_filter not in l_low:
+                    continue
+                if notif_channel and f"{notif_channel.upper()} |" not in l:
+                    continue
+                if notif_status and notif_status.upper() not in l:
+                    continue
+                filtered.append(l)
+            notifications = filtered[-20:]
     if os.path.exists(detection_log_path):
         with open(detection_log_path) as f:
-            detections = f.readlines()[-20:]
+            logs = f.readlines()[-100:]
+            detections = [l for l in logs if detect_filter in l.lower()][-20:]
     return jsonify({'notifications': notifications, 'detections': detections})
 
 @dashboard_bp.route('/dashboard/clear_log/<logtype>', methods=['POST'])

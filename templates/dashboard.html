@@ -14,7 +14,12 @@
     </style>
     <script>
     function fetchLogs() {
-        fetch('/dashboard/logs_ajax').then(r => r.json()).then(data => {
+        let notif_filter = document.getElementById('notif-filter').value;
+        let notif_channel = document.getElementById('notif-channel').value;
+        let notif_status = document.getElementById('notif-status').value;
+        let detect_filter = document.getElementById('detect-filter').value;
+        let url = `/dashboard/logs_ajax?notif_filter=${encodeURIComponent(notif_filter)}&notif_channel=${encodeURIComponent(notif_channel)}&notif_status=${encodeURIComponent(notif_status)}&detect_filter=${encodeURIComponent(detect_filter)}`;
+        fetch(url).then(r => r.json()).then(data => {
             let notif = document.getElementById('notif-log');
             notif.innerHTML = '';
             data.notifications.forEach(l => {
@@ -56,12 +61,26 @@
         <h3>Recent Detections</h3>
         <button class="btn" onclick="window.location='/dashboard/log/detection'">Download</button>
         <button class="btn" onclick="clearLog('detection')">Clear</button>
+        <input type="text" id="detect-filter" placeholder="Search..." oninput="fetchLogs()" style="margin-left:1em">
         <ul id="detection-log"></ul>
     </div>
     <div class="log-section">
         <h3>Notification History</h3>
         <button class="btn" onclick="window.location='/dashboard/log/notification'">Download</button>
         <button class="btn" onclick="clearLog('notification')">Clear</button>
+        <input type="text" id="notif-filter" placeholder="Search..." oninput="fetchLogs()">
+        <select id="notif-channel" onchange="fetchLogs()">
+            <option value="">All Channels</option>
+            <option value="email">Email</option>
+            <option value="telegram">Telegram</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="discord">Discord</option>
+        </select>
+        <select id="notif-status" onchange="fetchLogs()">
+            <option value="">All Status</option>
+            <option value="SENT">SENT</option>
+            <option value="FAILED">FAILED</option>
+        </select>
         <ul id="notif-log"></ul>
     </div>
     <h3>Notification Channels</h3>
