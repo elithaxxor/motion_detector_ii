@@ -1,0 +1,9 @@
+# Motion Detector Configuration
+sensitivity: 800  # Minimum contour area to trigger detection
+threshold: 100    # Threshold value for frame delta
+hotkey: 'ctrl+l'  # Hotkey to stop the program
+headless: false   # Run without GUI windows
+auto_start: false # Auto-start on boot (systemd)
+reference_update: true # Use adaptive background updating
+camera_index: 0   # Default camera device index
+log_file: 'camera_log.txt' # Log file path
