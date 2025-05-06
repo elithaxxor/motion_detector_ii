@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Person Detector Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 1em; }
+        @media (max-width: 600px) { body { font-size: 1.2em; } }
+        .log-section { margin-bottom: 2em; }
+        .btn { padding: 0.3em 1em; margin: 0.2em; }
+        .status-ok { color: green; }
+        .status-bad { color: red; }
+    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <script>
+    function fetchLogs() {
+        let notif_filter = document.getElementById('notif-filter').value;
+        let notif_channel = document.getElementById('notif-channel').value;
+        let notif_status = document.getElementById('notif-status').value;
+        let detect_filter = document.getElementById('detect-filter').value;
+        let url = `/dashboard/logs_ajax?notif_filter=${encodeURIComponent(notif_filter)}&notif_channel=${encodeURIComponent(notif_channel)}&notif_status=${encodeURIComponent(notif_status)}&detect_filter=${encodeURIComponent(detect_filter)}`;
+        fetch(url).then(r => r.json()).then(data => {
+            let notif = document.getElementById('notif-log');
+            notif.innerHTML = '';
+            data.notifications.forEach(l => {
+                let li = document.createElement('li');
+                li.textContent = l;
+                notif.appendChild(li);
+            });
+            let det = document.getElementById('detection-log');
+            det.innerHTML = '';
+            data.detections.forEach(l => {
+                let li = document.createElement('li');
+                li.textContent = l;
+                det.appendChild(li);
+            });
+        });
+    }
+    function fetchHealth() {
+        fetch('/health').then(r => r.json()).then(data => {
+            document.getElementById('camera-status').textContent = data.camera ? 'OK' : 'ERROR';
+            document.getElementById('disk-status').textContent = data.disk_ok ? 'OK' : 'LOW SPACE';
+            document.getElementById('disk-status').className = data.disk_ok ? 'status-ok' : 'status-bad';
+            document.getElementById('disk-percent').textContent = data.disk_percent + '%';
+            // Resource monitor
+            let res = data.resource_status || {};
+            let cpu = res.cpu || 0;
+            let mem = res.memory || 0;
+            document.getElementById('cpu-percent').textContent = cpu + '%';
+            document.getElementById('mem-percent').textContent = mem + '%';
+            document.getElementById('cpu-status').textContent = cpu >= 90 ? 'HIGH' : 'OK';
+            document.getElementById('cpu-status').className = cpu >= 90 ? 'status-bad' : 'status-ok';
+            document.getElementById('mem-status').textContent = mem >= 90 ? 'HIGH' : 'OK';
+            document.getElementById('mem-status').className = mem >= 90 ? 'status-bad' : 'status-ok';
+        });
+    }
+    function clearLog(type) {
+        if(confirm('Clear ' + type + ' log?')) {
+            fetch('/dashboard/clear_log/' + type, {method:'POST'}).then(fetchLogs);
+        }
+    }
+    function loadThresholds() {
+        fetch('/dashboard/resource_thresholds').then(r => r.json()).then(data => {
+            document.getElementById('thresh-disk').value = data.disk;
+            document.getElementById('thresh-cpu').value = data.cpu;
+            document.getElementById('thresh-mem').value = data.memory;
+        });
+    }
+    function saveThresholds() {
+        let disk = document.getElementById('thresh-disk').value;
+        let cpu = document.getElementById('thresh-cpu').value;
+        let mem = document.getElementById('thresh-mem').value;
+        fetch('/dashboard/resource_thresholds', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({disk, cpu, memory: mem})
+        }).then(r => r.json()).then(data => {
+            let s = document.getElementById('thresh-status');
+            if(data.ok) { s.textContent = 'Saved!'; s.style.color = 'green'; }
+            else { s.textContent = 'Error: ' + data.error; s.style.color = 'red'; }
+            setTimeout(()=>{s.textContent='';}, 2000);
+        });
+        return false;
+    }
+    function sendTerminalMessage() {
+        const input = document.getElementById('terminal-input');
+        const windowDiv = document.getElementById('terminal-window');
+        const msg = input.value.trim();
+        if (msg) {
+            const msgDiv = document.createElement('div');
+            msgDiv.innerHTML = `<span style='color:#00ff00;'>$</span> ${msg}`;
+            windowDiv.appendChild(msgDiv);
+            windowDiv.scrollTop = windowDiv.scrollHeight;
+        }
+        input.value = '';
+        return false;
+    }
+    function loadFtpConfig() {
+        fetch('/dashboard/ftp_config').then(r => r.json()).then(cfg => {
+            document.getElementById('ftp-host').value = cfg.FTP_HOST || '';
+            document.getElementById('ftp-port').value = cfg.FTP_PORT || 21;
+            document.getElementById('ftp-user').value = cfg.FTP_USER || '';
+            document.getElementById('ftp-pass').value = cfg.FTP_PASS || '';
+            document.getElementById('ftp-remote-dir').value = cfg.FTP_REMOTE_DIR || '/';
+            document.getElementById('ftp-use-sftp').checked = cfg.FTP_USE_SFTP === true || cfg.FTP_USE_SFTP === 'true';
+        });
+    }
+    function saveFtpConfig() {
+        const data = {
+            FTP_HOST: document.getElementById('ftp-host').value,
+            FTP_PORT: parseInt(document.getElementById('ftp-port').value),
+            FTP_USER: document.getElementById('ftp-user').value,
+            FTP_PASS: document.getElementById('ftp-pass').value,
+            FTP_REMOTE_DIR: document.getElementById('ftp-remote-dir').value,
+            FTP_USE_SFTP: document.getElementById('ftp-use-sftp').checked
+        };
+        fetch('/dashboard/ftp_config', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(data)
+        }).then(r => r.json()).then(resp => {
+            document.getElementById('ftp-config-status').textContent = resp.ok ? 'Saved!' : ('Error: ' + resp.msg);
+            setTimeout(()=>{document.getElementById('ftp-config-status').textContent = '';}, 2000);
+        });
+        return false;
+    }
+    function testFtpUpload() {
+        document.getElementById('ftp-test-status').textContent = 'Testing...';
+        fetch('/dashboard/ftp_test', {method: 'POST'}).then(r => r.json()).then(resp => {
+            document.getElementById('ftp-test-status').textContent = resp.ok ? 'Success!' : ('Failed: ' + resp.msg);
+            setTimeout(()=>{document.getElementById('ftp-test-status').textContent = '';}, 4000);
+        });
+    }
+    function loadFtpUploadLog() {
+        fetch('/dashboard/ftp_upload_log').then(r => r.json()).then(logs => {
+            const ul = document.getElementById('ftp-upload-log');
+            ul.innerHTML = '';
+            if (!logs.length) {
+                ul.innerHTML = '<li>No FTP upload activity yet.</li>';
+            } else {
+                logs.forEach(line => {
+                    const li = document.createElement('li');
+                    li.textContent = line;
+                    ul.appendChild(li);
+                });
+            }
+        });
+    }
+    window.onload = function() {
+        loadFtpConfig();
+        fetchLogs();
+        fetchHealth();
+        loadThresholds();
+        loadFtpUploadLog();
+    }
+    </script>
+</head>
+<body>
+  <div id="dashboard-root">
+    <h2>System Status</h2>
+    <div>Status: Camera <span id="camera-status"></span> |
+        Disk <span id="disk-status"></span> (<span id="disk-percent"></span> used) |
+        CPU <span id="cpu-status"></span> (<span id="cpu-percent"></span> used) |
+        Memory <span id="mem-status"></span> (<span id="mem-percent"></span> used)
+    </div>
+    <div class="log-section">
+        <h3>Recent Detections</h3>
+        <button class="btn" onclick="window.location='/dashboard/log/detection'">Download</button>
+        <button class="btn" onclick="clearLog('detection')">Clear</button>
+        <input type="text" id="detect-filter" placeholder="Search..." oninput="fetchLogs()" style="margin-left:1em">
+        <ul id="detection-log"></ul>
+    </div>
+    <div class="log-section">
+        <h3>Notification History</h3>
+        <button class="btn" onclick="window.location='/dashboard/log/notification'">Download</button>
+        <button class="btn" onclick="clearLog('notification')">Clear</button>
+        <input type="text" id="notif-filter" placeholder="Search..." oninput="fetchLogs()">
+        <label for="notif-channel">Notification Channel:</label>
+        <select id="notif-channel" onchange="fetchLogs()">
+            <option value="">All Channels</option>
+            <option value="email">Email</option>
+            <option value="telegram">Telegram</option>
+            <option value="whatsapp">WhatsApp</option>
+            <option value="discord">Discord</option>
+        </select>
+        <label for="notif-status">Notification Status:</label>
+        <select id="notif-status" onchange="fetchLogs()">
+            <option value="">All Status</option>
+            <option value="SENT">SENT</option>
+            <option value="FAILED">FAILED</option>
+        </select>
+        <ul id="notif-log"></ul>
+    </div>
+    <div class="log-section">
+        <h3>Resource Alert Thresholds</h3>
+        <form id="threshold-form" onsubmit="return saveThresholds();">
+            <label>Disk (%) <input type="number" min="1" max="100" id="thresh-disk"></label>
+            <label>CPU (%) <input type="number" min="1" max="100" id="thresh-cpu"></label>
+            <label>Memory (%) <input type="number" min="1" max="100" id="thresh-mem"></label>
+            <button class="btn" type="submit">Save</button>
+            <span id="thresh-status"></span>
+        </form>
+    </div>
+    <div class="log-section">
+        <h3>FTP Server Settings</h3>
+        <form id="ftp-config-form" onsubmit="return saveFtpConfig();">
+            <label>Host: <input type="text" id="ftp-host" required></label>
+            <label>Port: <input type="number" id="ftp-port" min="1" max="65535" required></label>
+            <label>Username: <input type="text" id="ftp-user" required></label>
+            <label>Password: <input type="password" id="ftp-pass" required></label>
+            <label>Remote Dir: <input type="text" id="ftp-remote-dir" required></label>
+            <label>Use SFTP: <input type="checkbox" id="ftp-use-sftp"></label>
+            <button class="btn" type="submit">Save FTP Config</button>
+            <span id="ftp-config-status"></span>
+        </form>
+        <button class="btn" onclick="testFtpUpload()">Test FTP Upload</button>
+        <span id="ftp-test-status"></span>
+    </div>
+    <div class="log-section">
+        <h3>FTP Upload Log</h3>
+        <button class="btn" onclick="loadFtpUploadLog()">Refresh Log</button>
+        <ul id="ftp-upload-log" style="font-family:monospace;font-size:0.95em;max-height:200px;overflow:auto;background:#222;color:#fff;padding:8px 12px;list-style-type:none;"></ul>
+    </div>
+    <h3>Notification Channels</h3>
+    <ul>
+        <li>Email: {{ 'Enabled' if channels and channels.get('email', False) else 'Disabled' }}</li>
+        <li>Telegram: {{ 'Enabled' if channels and channels.get('telegram', False) else 'Disabled' }}</li>
+        <li>WhatsApp: {{ 'Enabled' if channels and channels.get('whatsapp', False) else 'Disabled' }}</li>
+        <li>Discord: {{ 'Enabled' if channels and channels.get('discord', False) else 'Disabled' }}</li>
+    </ul>
+    <a href="/dashboard/logout">Logout</a>
+    <!-- Terminal Chatroom Section Start -->
+    <div id="terminal-chatroom">
+        <h3>Chatroom Terminal</h3>
+        <div id="terminal-window">
+            <!-- Chat messages will appear here -->
+        </div>
+        <form id="terminal-form" onsubmit="return sendTerminalMessage();">
+            <span>$</span>
+            <input id="terminal-input" type="text" autocomplete="off" placeholder="Type a command..." />
+            <button type="submit">Send</button>
+        </form>
+    </div>
+    <!-- Terminal Chatroom Section End -->
+  </div>
+</body>
+</html>

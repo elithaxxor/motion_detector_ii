@@ -1,72 +1,206 @@
-Motion Detection Security Camera
+# YOLO Persons Detector
 
-This Python program is designed to capture video from your webcam and detect motion in real time. The program uses OpenCV for image processing and displays a live security feed with motion-detected events highlighted with bounding boxes. Additionally, it logs the motion events with a timestamp into a log file.
+## [2025-05-06] Update
+- Documentation reviewed and updated for clarity and completeness.
+- Installation, usage, and testing instructions improved.
+- C++ and Python integration details clarified.
+- Added troubleshooting for common issues (e.g., OpenCV install).
+- Updated YOLO_EMBEDDED section for embedded/edge use cases.
 
-Features
+A high-performance, privacy-respecting, on-demand live video feed and notification system for human detection using YOLOv3-tiny.
 
-	•	Real-Time Motion Detection: Detects movement by comparing frames and identifying significant differences.
-	•	Security Feed Display: The feed from the webcam is displayed with real-time motion tracking and timestamps.
-	•	Bounding Box on Motion: When motion is detected, a green rectangle is drawn around the moving object.
-	•	Log Motion Events: All detected motion events are logged into camera_log.txt with a timestamp.
-	•	Multiple Windows Display: The program shows the security feed, the thresholded image (binary image), and the frame delta used for motion detection.
+## Changelog
+See [CHANGELOG.md](./CHANGELOG.md) for a detailed list of changes and release notes.
 
-How It Works
+## Features
+- **YOLOv3-tiny Person Detection:** Accurate detection of humans in camera/video streams.
+- **On-Demand Live Feed:** Local GUI and web stream only appear when a person is detected.
+- **Multi-Channel Notifications:** Email, Telegram, WhatsApp, Discord alerts with live feed link.
+- **REST API:** Control and monitor the system via HTTP endpoints.
+- **Hotkey Support:** Quickly stop or control the system via keyboard.
+- **Extensible:** Modular codebase for multi-camera, cloud upload, face/object recognition, and more.
+- **.env file for API keys**: Store Telegram, WhatsApp, Discord, and Shodan API keys securely.
+- **Shodan API integration**: Query Shodan for device exposure and enrich alerts.
+- **Remote access**: The dashboard and API can be accessed remotely (listens on 0.0.0.0).
+- **C code organization**: All C code moved to `YOLO_EMBEDDED/` directory.
 
-	1.	Video Capture: The program starts by capturing video from your webcam using OpenCV.
-	2.	Frame Processing: Each frame is converted to greyscale, blurred to reduce noise, and compared to an initial reference frame (the first frame captured).
-	3.	Motion Detection: The difference between the current frame and the reference frame is used to detect motion. If significant changes (contours) are found in the frame, the motion is marked as detected.
-	4.	Bounding Box: A green bounding box is drawn around the detected motion area.
-	5.	Logging: The timestamp and detection event are recorded in camera_log.txt.
-	6.	Live Feed: A live feed with detected motion is shown to the user with real-time timestamps.
+## Quick Start
 
-Installation
+### 1. Requirements
+- Python 3.7+
+- OpenCV (`opencv-python`)
+- Flask
+- requests
 
-Prerequisites:
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-	1.	Install Python (if not already installed)
-	2.	Install required libraries:
-	•	OpenCV
-•	Imutils
-	•	Numpy
+### 2. Download YOLOv3-tiny Model Files
+- Place `yolov3-tiny.cfg`, `yolov3-tiny.weights`, and `coco.names` in a `models/` directory at the project root.
+- Download from [YOLO website](https://pjreddie.com/darknet/yolo/) or the [official repo](https://github.com/pjreddie/darknet/tree/master/cfg).
 
-To Install the Required Libraries:
+### 3. Configure Notifications
+Edit `config.yaml` to enable and configure Email, Telegram, WhatsApp, and Discord notifications.
 
-    1.	Clone the Repository:
-        ``` git clone
-    2. pip install -r requirements.txt
+### 4. Run the Detector
+```bash
+python -m motion_detector.main
+```
 
-Steps:
+- The live feed (GUI and web at `http://localhost:5000/video_feed`) will activate only when a person is detected.
+- Notifications are sent on detection.
+- REST API available at `http://localhost:8000`.
 
-Usage
+## REST API
+- `GET /status` — System status (live feed, detection active)
+- `POST /notify` — Send notification (JSON: `{subject, body}`)
+- `POST /control` — Start/stop detection (JSON: `{action: start|stop}`)
 
-	•	When the program runs, it captures video from your webcam.
-	•	If motion is detected, the program will display a bounding box around the moving object and log the event.
-	•	Press the q key at any time to quit the program and close all windows.
+## Instructions for Remote Access & Security
 
-Motion Detection Process:
+1. **Start the server:**
+   ```bash
+   python3 motion_detector/main.py
+   ```
+2. **Firewall:**
+   - Ensure your firewall allows inbound connections on the port you run the server (default: 5000).
+   - For Linux with ufw:
+     ```bash
+     sudo ufw allow 5000
+     ```
+3. **Access Remotely:**
+   - From any device/browser on your network (or Internet, if port forwarded), visit:
+     ```
+     http://<your-server-ip>:5000
+     ```
+4. **Security:**
+   - Do NOT share your .env or config.yaml files.
+   - For Internet exposure, use authentication, VPN, or firewall rules for safety.
 
-	•	Frame Comparison: The first frame is taken as a reference. Each subsequent frame is compared to this reference using a difference calculation (frame delta).
-	•	Thresholding: Any significant differences are highlighted in the thresholded image.
+## .gitignore Usage
+- A `.gitignore` file is provided to prevent sensitive files from being committed to git.
+- By default, `.env`, log files, and other secrets are excluded from version control.
 
-	•	Contours: Contours are drawn around detected areas of motion. If the area is large enough (above 800 pixels), it is considered a motion event.
-	•	Log File: Each motion event is logged into camera_log.txt with a timestamp for tracking purposes.
+## Remote Access
+To access the dashboard and API remotely:
+1. Make sure your server firewall allows inbound connections on the relevant port (default: 5000 or 8000).
+2. Start the server with:
+   ```bash
+   python3 motion_detector/main.py
+   ```
+3. Visit `http://<your-server-ip>:5000` or `http://<your-server-ip>:8000` from your remote device/browser.
 
-Customization:
+## Environment Variables (.env)
+Create a `.env` file in your project root:
+```
+TELEGRAM_BOT_TOKEN=your_telegram_token
+TELEGRAM_CHAT_ID=your_telegram_chat_id
+WHATSAPP_PHONE=your_whatsapp_phone
+WHATSAPP_APIKEY=your_whatsapp_apikey
+DISCORD_WEBHOOK_URL=your_discord_webhook
+SHODAN_API_KEY=your_shodan_api_key
+```
 
-	•	You can adjust the threshold level and contour area sensitivity in the code to detect smaller or larger movements as per your requirements.
+## Shodan API Usage
+You can use Shodan utilities in your code:
+```python
+from motion_detector.shodan_utils import shodan_search, shodan_host
+results = shodan_search('webcam')
+print(results)
+```
 
-File Log
+## YOLO_EMBEDDED
 
-	•	camera_log.txt: This file logs the detected motion events with timestamps.
+YOLO_EMBEDDED is a module for embedded object/person detection using the YOLO (You Only Look Once) algorithm. It is designed for efficient real-time detection on security camera feeds or other video sources.
 
-Example Output:
+### Features
+- Real-time person detection using YOLO
+- Region of interest (ROI) selection
+- Motion detection
+- Notification support
 
-	•	Security Feed: Displays the live webcam feed with a bounding box around detected motion.
-	•	Threshold Image: Shows the binary image after thresholding, highlighting areas of motion.
-	•	Frame Delta: Displays the difference between the current frame and the reference frame.
+### Installation
 
-License
+#### Prerequisites
+- Python 3.7+
+- pip
+- OpenCV (cv2)
+- numpy
+- Flask (if using the web interface)
+- [Optional] ffmpeg (for video processing)
 
-This project is free to use under the MIT License.
+#### Install Python dependencies
+```sh
+pip install -r requirements.txt
+```
 
-This project provides a basic motion detection system using Python and OpenCV, which can be further expanded for home security, surveillance, or other applications involving real-time motion tracking.# Security-Camera-Motion-Detection
+#### Install OpenCV
+```sh
+pip install opencv-python
+```
+
+#### C++ Components
+If using C++ modules (e.g., roi_select.cpp):
+```sh
+g++ roi_select.cpp -o roi_select `pkg-config --cflags --libs opencv4`
+```
+
+### Usage
+- Run the main Python module:
+```sh
+python3 motion_detector/main.py
+```
+- For C++ ROI selection:
+```sh
+./roi_select
+```
+
+### Configuration
+- Edit the `.env` file for environment variables.
+- Camera sources and notification settings can be adjusted in the configuration files.
+
+### Testing
+To run all Python tests:
+```sh
+pytest
+```
+
+### Project Structure
+- `motion_detector/`: Main Python code for motion and person detection
+- `tests/`: Test suite
+- `roi_select.cpp`: C++ ROI selection tool
+
+### License
+See LICENSE file for details.
+
+## File Structure
+- `main.py` — Main entry point, orchestrates detection, feeds, notifications, API.
+- `yolo_person_detector.py` — YOLOv3-tiny person detection logic.
+- `live_feed.py` — Local GUI and Flask web stream.
+- `notifier.py` — Notification logic for all channels.
+- `api.py` — REST API server.
+- `motion.py`, `hotkey_listener.py`, `auto_start.py`, `utils.py` — Utilities and support modules.
+- `YOLO_EMBEDDED/` — Directory containing all C code.
+
+## Advanced Usage
+- **Multi-camera:** Extend by running multiple pipelines or adding camera configs.
+- **Cloud upload, face/object recognition:** Add new modules or models as needed.
+- **Snapshot in notifications:** Easily extend notifier to send images.
+
+## Security
+- Protect `config.yaml` and model files.
+- Use authentication for web/API if exposing beyond localhost.
+- Protect your .env and config.yaml files. Do not share them publicly.
+- For remote access, ensure you use strong passwords and consider VPN or firewall restrictions.
+
+## Contributing
+Contributions welcome! Open issues or submit PRs for new features, bugfixes, or documentation.
+
+## License
+MIT License
+
+---
+
+**Repository:** https://github.com/elithaxxor/YOLO_Persons_Detector.git

@@ -3,3 +3,5 @@ imutils
 numpy
 pyyaml
 pynput
+python-dotenv
+shodan

@@ -2,9 +2,19 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
+*.pyo
+*.pyd
 
 # C extensions
 *.so
+*.o
+*.out
+*.a
+YOLO_EMBEDDED/*.o
+YOLO_EMBEDDED/*.so
+YOLO_EMBEDDED/*.out
+YOLO_EMBEDDED/*.a
 
 # Distribution / packaging
 .Python
@@ -55,7 +65,7 @@ coverage.xml
 .pytest_cache/
 
 # Jupyter Notebook
-.ipynb_checkpoints
+.ipynb_checkpoints/
 
 # pyenv
 .python-version
@@ -96,3 +106,76 @@ cython_debug/
 
 # Ignore OpenCV binaries
 cv2*.so
+
+# C++ build artifacts
+*.exe
+*.obj
+*.gch
+*.pch
+*.ilk
+*.manifest
+*.dep
+*.d
+*.cmd
+*.log
+*.suo
+*.user
+*.idb
+*.pdb
+*.ipch
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+*.tlog
+*.VC.db
+*.VC.opendb
+
+# IDE/editor folders
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS generated files
+Thumbs.db
+
+# Environment/config files
+*.env
+config.yaml
+
+# Logs
+camera_log.txt
+camera_log_frontdoor.txt
+
+# Misc
+*.bak
+*.tmp
+*.swp
+*.swo
+
+# YOLO weights and models
+*.weights
+*.cfg
+*.onnx
+*.pb
+*.tflite
+*.h5
+*.pt
+
+# Test and coverage
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Ignore camera logs
+camera_log*.txt
