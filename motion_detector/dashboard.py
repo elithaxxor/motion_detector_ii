@@ -3,11 +3,15 @@ from functools import wraps
 import yaml
 import os
 import psutil
+from motion_detector.resource_monitor import ResourceMonitor
 
 # Simple password for demonstration (should be hashed in production)
 DASHBOARD_PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "admin")
 
 dashboard_bp = Blueprint('dashboard', __name__)
+
+# Global resource monitor instance (set in main)
+resource_monitor = None
 
 # Authentication decorator
 def login_required(f):
@@ -114,6 +118,74 @@ def clear_log(logtype):
     open(path, 'w').close()
     return '', 204
 
+@dashboard_bp.route('/dashboard/resource_thresholds', methods=['GET', 'POST'])
+@login_required
+def resource_thresholds():
+    global resource_monitor
+    if request.method == 'POST':
+        data = request.json
+        # Validate input
+        try:
+            disk = int(data.get('disk', 90))
+            cpu = int(data.get('cpu', 90))
+            memory = int(data.get('memory', 90))
+            new_thresholds = {'disk': disk, 'cpu': cpu, 'memory': memory}
+            resource_monitor.update_thresholds(new_thresholds)
+            return jsonify({'ok': True, 'thresholds': new_thresholds})
+        except Exception as e:
+            return jsonify({'ok': False, 'error': str(e)}), 400
+    else:
+        thresholds = resource_monitor.get_thresholds() if resource_monitor else {'disk': 90, 'cpu': 90, 'memory': 90}
+        return jsonify(thresholds)
+
+# --- FTP Config Routes ---
+from flask import current_app
+import json
+
+@dashboard_bp.route('/dashboard/ftp_config', methods=['GET', 'POST'])
+@login_required
+def ftp_config():
+    config_path = os.path.join(os.path.dirname(__file__), '../ftp_config.json')
+    if request.method == 'POST':
+        data = request.json
+        with open(config_path, 'w') as f:
+            json.dump(data, f)
+        return jsonify({'ok': True})
+    else:
+        if os.path.exists(config_path):
+            with open(config_path) as f:
+                data = json.load(f)
+        else:
+            data = {}
+        return jsonify(data)
+
+@dashboard_bp.route('/dashboard/ftp_test', methods=['POST'])
+@login_required
+def ftp_test():
+    from ftp_utils import upload_via_ftp
+    import tempfile
+    try:
+        # Create a temp file and attempt upload
+        with tempfile.NamedTemporaryFile('w', delete=False) as f:
+            f.write('FTP test file')
+            temp_path = f.name
+        upload_via_ftp(temp_path, 'ftp_test_file.txt')
+        os.remove(temp_path)
+        return jsonify({'ok': True, 'msg': 'FTP upload succeeded.'})
+    except Exception as e:
+        return jsonify({'ok': False, 'msg': str(e)})
+
+@dashboard_bp.route('/dashboard/ftp_upload_log')
+@login_required
+def ftp_upload_log():
+    log_path = os.path.join(os.path.dirname(__file__), '../ftp_upload.log')
+    if not os.path.exists(log_path):
+        return jsonify([])
+    with open(log_path, 'r') as f:
+        lines = f.readlines()
+    # Return last 20 entries, newest last
+    return jsonify([l.strip() for l in lines[-20:]])
+
 @dashboard_bp.route('/health')
 def health():
     # Camera status: check if camera is available (simulate for now)
@@ -122,15 +194,16 @@ def health():
     config_path = os.path.join(os.path.dirname(__file__), '../config.yaml')
     with open(config_path) as f:
         config = yaml.safe_load(f)
-    notif_status = {}
-    for ch in ['email', 'telegram', 'whatsapp', 'discord']:
-        notif_status[ch] = bool(config.get(ch, {}).get('enabled', False))
+    notif_status = {ch: bool(config.get(ch, {}).get('enabled', False)) for ch in ['email', 'telegram', 'whatsapp', 'discord']}
     # Disk space
     disk = psutil.disk_usage('/')
     disk_ok = disk.percent < 90
+    # Resource monitor status
+    res_status = resource_monitor.get_status() if resource_monitor else {}
     return jsonify({
         'camera': camera_status,
         'notifications': notif_status,
         'disk_ok': disk_ok,
-        'disk_percent': disk.percent
+        'disk_percent': disk.percent,
+        'resource_status': res_status
     })

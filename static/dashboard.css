@@ -1,0 +1,82 @@
+/* Dashboard Styles extracted from inline styles */
+
+#dashboard-root {
+    max-width: 1000px;
+    margin: 2em auto;
+}
+
+.log-section {
+    margin-bottom: 2em;
+}
+
+.btn {
+    background: #222;
+    color: #00ff00;
+    border: none;
+    padding: 0.5em 1em;
+    font-family: monospace;
+    cursor: pointer;
+    border-radius: 4px;
+    margin-right: 0.5em;
+}
+
+#terminal-chatroom {
+    max-width: 700px;
+    margin: 2em auto 0 auto;
+}
+
+#terminal-window {
+    background: #181818;
+    color: #00ff00;
+    font-family: monospace;
+    padding: 1em;
+    height: 250px;
+    overflow-y: auto;
+    border-radius: 6px;
+    box-shadow: 0 0 10px #222;
+}
+
+#terminal-form {
+    display: flex;
+    margin-top: 0.5em;
+}
+
+#terminal-form span {
+    color: #00ff00;
+    font-family: monospace;
+    padding: 0.5em 0;
+}
+
+#terminal-input {
+    background: #181818;
+    color: #00ff00;
+    border: none;
+    outline: none;
+    font-family: monospace;
+    font-size: 1em;
+    flex: 1;
+    padding: 0.5em;
+    margin-left: 0.5em;
+}
+
+#terminal-form button {
+    background: #222;
+    color: #00ff00;
+    border: none;
+    padding: 0.5em 1em;
+    margin-left: 0.5em;
+    font-family: monospace;
+    cursor: pointer;
+}
+
+#thresh-disk, #thresh-cpu, #thresh-mem {
+    width: 4em;
+}
+
+.status-ok {
+    color: green;
+}
+
+.status-bad {
+    color: red;
+}

@@ -3,6 +3,8 @@ import imutils
 import numpy as np
 import time
 import logging
+import os
+from ftp_utils import upload_via_ftp
 
 class MotionDetector:
     def __init__(self, sensitivity, threshold, reference_update, camera_index, logger, video_path=None):
@@ -52,8 +54,8 @@ class MotionDetector:
                 self.logger.info(f"Attempting to open camera (index: {self.camera_index})")
                 cap = cv2.VideoCapture(self.camera_index)
                 if not cap.isOpened():
-                    self.logger.error(f"No camera found or cannot be opened (index: {self.camera_index})")
-                    print(f"[ERROR] No camera found or cannot be opened (index: {self.camera_index})")
+                    self.logger.error(f"Unable to open camera (index: {self.camera_index})")
+                    print(f"[ERROR] Unable to open camera (index: {self.camera_index})")
                     return
             time.sleep(2)
             self.logger.info("Video stream started.")
@@ -83,6 +85,9 @@ class MotionDetector:
                     if cv2.waitKey(1) & 0xFF == 27:  # ESC for emergency exit
                         self.logger.info('ESC pressed, exiting.')
                         break
+                # After detection logic, when saving a frame (example):
+                # cv2.imwrite(save_path, frame)
+                # upload_via_ftp(save_path)
             cap.release()
             cv2.destroyAllWindows()
             self.logger.info("Video stream ended and resources released.")

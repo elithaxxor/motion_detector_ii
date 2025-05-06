@@ -19,6 +19,8 @@ from yolo_person_detector import YoloPersonDetector
 from live_feed import LiveFeedManager
 from notifier import Notifier
 from api import APIServer
+from motion_detector.resource_monitor import ResourceMonitor
+from motion_detector.dashboard import dashboard_bp, resource_monitor
 import cv2
 import time
 
@@ -73,12 +75,35 @@ def main():
         hotkey_listener = HotkeyListener(hotkey, stop_flag)
         hotkey_listener.start()
 
-        # Initialize notifier
-        notifier = Notifier(config, email_notification, telegram_notification, whatsapp_notification, discord_notification)
-        person_alert_sent = False
+        # --- Notification Setup ---
+        notifications_cfg = cam_cfg.get('notifications', {})
+        notifier = Notifier(notifications_cfg)
+        # --- Person Detection Event ---
+        def on_person_detected(frame=None):
+            # You can customize the alert message here
+            subject = f"ALERT: Person Detected - {cam_cfg.get('name', 'Camera')}"
+            message = f"A person was detected by {cam_cfg.get('name', 'Camera')} at {time.strftime('%Y-%m-%d %H:%M:%S')}"
+            notifier.notify_all(subject, message)
+        # --- Detector Setup ---
+        detector = MotionDetector(
+            sensitivity=sensitivity,
+            threshold=threshold,
+            reference_update=reference_update,
+            camera_index=cam_cfg.get('camera_index', 0),
+            logger=setup_logger(cam_cfg.get('log_file', 'camera_log.txt')),
+            video_path=args.video
+        )
+        # --- Attach event handler ---
+        detector.on_person_detected = on_person_detected
+
+        # Start resource monitor
+        resmon = ResourceMonitor(notifier)
+        resmon.start()
+        # Make resource monitor available to dashboard
+        import motion_detector.dashboard as dash_mod
+        dash_mod.resource_monitor = resmon
 
         # Initialize detectors
-        detector = MotionDetector(sensitivity, threshold, reference_update, camera_index, logger, video_path=args.video)
         person_detector = YoloPersonDetector(conf_threshold=0.5)
         live_feed = LiveFeedManager()
         api_server = APIServer(detector, notifier, live_feed, stop_flag)
@@ -110,11 +135,9 @@ def main():
                     last_person_time = now
 
                     # Send notification if not already sent
-                    if not person_alert_sent:
-                        url = f"http://localhost:5000/video_feed"
-                        msg = f"Human detected! Live feed available at {url}"
-                        notifier.notify_all("Human Detected", msg)
-                        person_alert_sent = True
+                    if not hasattr(detector, 'person_alert_sent') or not detector.person_alert_sent:
+                        detector.person_alert_sent = True
+                        detector.on_person_detected(frame)
 
                     # Draw bounding boxes for detected persons
                     for (x1, y1, x2, y2, conf) in persons:
@@ -143,7 +166,7 @@ def main():
                     # Stop web stream if live feed timeout exceeded
                     live_feed.stop()
                     live_feed_started = False
-                    person_alert_sent = False
+                    detector.person_alert_sent = False
 
                 # Hotkey and exit logic
                 if window_open:
