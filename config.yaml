@@ -1,4 +1,4 @@
-# Motion Detector Configuration
+# Motiontor Configuration
 cameras:
   - name: FrontDoor
     camera_index: 0
@@ -31,6 +31,14 @@ cameras:
         enabled: false
         on_person: true
         webhook_url: ""
+    detector:
+      type: yolo_v5
+      model_path: models/yolov5s.pt
+      conf_threshold: 0.5
+      target_classes:
+        - person
+        - car
+        - bicycle
   - name: Garage
     camera_index: 1
     sensitivity: 700
@@ -62,6 +70,22 @@ cameras:
         enabled: false
         on_person: true
         webhook_url: ""
+    detector:
+      type: yolo_v5
+      model_path: models/yolov5s.pt
+      conf_threshold: 0.5
+      target_classes:
+        - person
+        - car
+        - bicycle
 hotkey: ctrl+l
 headless: false
 auto_start: false
+  
+live_feed:
+  host: 0.0.0.0
+  port: 3000
+
+api:
+  host: 0.0.0.0
+  port: 3001

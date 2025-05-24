@@ -1,6 +1,7 @@
 import threading
+import os
 import cv2
-from flask import Flask, Response
+from flask import Flask, Response, render_template
 
 class LiveFeedManager:
     def __init__(self):
@@ -8,10 +9,17 @@ class LiveFeedManager:
         self.frame = None
         self.lock = threading.Lock()
         self.thread = None
-        self.app = Flask(__name__)
+        # Use top-level templates/static folders
+        template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../templates'))
+        static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../static'))
+        self.app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
         self._setup_routes()
 
     def _setup_routes(self):
+        @self.app.route('/')
+        def index():
+            return render_template('live_feed.html')
+
         @self.app.route('/video_feed')
         def video_feed():
             return Response(self._gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
@@ -26,7 +34,7 @@ class LiveFeedManager:
                                b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n')
             cv2.waitKey(1)
 
-    def start(self, host='0.0.0.0', port=5000):
+    def start(self, host='0.0.0.0', port=3000):
         if self.thread is None or not self.thread.is_alive():
             self.active = True
             self.thread = threading.Thread(target=self.app.run, kwargs={'host': host, 'port': port, 'threaded': True}, daemon=True)

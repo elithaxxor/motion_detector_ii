@@ -5,3 +5,6 @@ pyyaml
 pynput
 python-dotenv
 shodan
+torch>=1.10.0
+ultralytics>=8.0.0
+face_recognition
